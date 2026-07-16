@@ -42,4 +42,21 @@ npm run render -- --config chart-config.json --format mp4 --fps 30 --height 1080
 - `png` sequence needs **no** FFmpeg (lossless, best for editors — but large).
 - `mp4` / `mov` / `webm` need a **full FFmpeg** on PATH
   (Windows: `choco install ffmpeg`) or `--ffmpeg <path>`. If it's missing the
-  renderer stops immediately with an install hint (no hang).
+  renderer stops immediately with an install hint (no hang). The renderer also
+  auto-detects FFmpeg in `%LOCALAPPDATA%\ffmpeg\`.
+
+## `export.mjs` — one-command export (`npm run export`)
+
+A friendly wrapper around `render.mjs`: it **auto-finds the newest
+`chart-config*.json`** (in Downloads or the project), renders it, and opens the
+output folder — so you never type a config path.
+
+```bash
+# In the app: Export → "Config (JSON)"   (downloads chart-config.json)
+npm run export                          # newest config → MP4 1080p 60fps
+npm run export -- --format mov --height 2160   # override defaults
+```
+
+For zero terminal, **double-click `export.bat`** in the project root — it runs
+`npm run export` and pauses so you can read the result. (The dev server must be
+running; it always is while you have the app open.)

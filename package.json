@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "verify": "node scripts/verify.mjs",
-    "render": "node scripts/render.mjs"
+    "render": "node scripts/render.mjs",
+    "export": "node scripts/export.mjs"
   },
   "dependencies": {
     "d3-array": "^3.2.4",

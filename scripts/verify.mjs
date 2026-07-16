@@ -40,6 +40,29 @@ results.dataHeaders = await page.$$eval(".data-table thead th", (ths) =>
   ths.map((t) => t.textContent).filter((t) => /^\d{4}-\d{2}$/.test(t ?? "")).slice(0, 3),
 );
 
+// ---- Add entity + period via inline form ----
+const counts = () =>
+  page.evaluate(() => {
+    const s = window.__studio.getState();
+    return {
+      entities: new Set(s.rows.map((r) => r.name)).size,
+      periods: new Set(s.rows.map((r) => r.date)).size,
+    };
+  });
+const beforeAdd = await counts();
+await page.getByRole("button", { name: "+ Entity" }).click();
+await page.fill(".add-box input", "TestNet");
+await page.getByRole("button", { name: "Add entity" }).click();
+await page.waitForTimeout(120);
+await page.getByRole("button", { name: "+ Period" }).click();
+await page.getByRole("button", { name: "Add period" }).click();
+await page.waitForTimeout(120);
+const afterAdd = await counts();
+results.addRowCol = {
+  entity: afterAdd.entities === beforeAdd.entities + 1,
+  period: afterAdd.periods === beforeAdd.periods + 1,
+};
+
 // ---- Import monthly (long) CSV works ----
 await page.getByRole("button", { name: "Paste data" }).click();
 await page.fill(".paste-box textarea", `Date,Platform,Users
@@ -181,6 +204,8 @@ const pass =
   results.monthly.dateFormat === "monthYear" &&
   results.monthly.counterOk === true &&
   results.dataHeaders.length >= 2 &&
+  results.addRowCol.entity === true &&
+  results.addRowCol.period === true &&
   results.importMonthly.dateFormat === "monthYear" &&
   results.padding.shifted === true &&
   results.customImagePresent === true &&

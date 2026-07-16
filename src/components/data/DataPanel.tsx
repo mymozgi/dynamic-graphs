@@ -23,6 +23,8 @@ export function DataPanel() {
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const [msg, setMsg] = useState<Message | null>(null);
+  const [adding, setAdding] = useState<null | "entity" | "period">(null);
+  const [addValue, setAddValue] = useState("");
 
   const { names, dates, valueOf } = useMemo(() => {
     const dateSet = new Set<number>();
@@ -80,25 +82,47 @@ export function DataPanel() {
     }
   }
 
-  function onAddEntity() {
-    const name = window.prompt("New entity name:");
-    if (name) addEntity(name);
+  function startAdd(kind: "entity" | "period") {
+    setAdding(kind);
+    if (kind === "period") {
+      const max = dates.length ? Math.max(...dates) : isMonthly ? 2004 : 2000;
+      setAddValue(isMonthly ? toYearMonth(max + 1 / 12) : String(Math.floor(max) + 1));
+    } else {
+      setAddValue("");
+    }
   }
 
-  function onAddPeriod() {
-    const max = dates.length ? Math.max(...dates) : 2000;
-    const next = dates.length ? max + (isMonthly ? 1 / 12 : 1) : max;
-    const suggested = isMonthly ? toYearMonth(next) : String(next);
-    const input = window.prompt("New period (YYYY-MM or year):", suggested);
-    if (input == null) return;
-    const date = parsePeriod(input);
-    if (Number.isFinite(date)) addPeriod(date);
+  function cancelAdd() {
+    setAdding(null);
+    setAddValue("");
+  }
+
+  function commitAdd() {
+    const v = addValue.trim();
+    if (adding === "entity") {
+      if (!v) return setMsg({ type: "error", text: "Enter an entity name." });
+      if (names.includes(v)) return setMsg({ type: "error", text: `"${v}" already exists.` });
+      addEntity(v);
+      setMsg({ type: "ok", text: `Added entity "${v}" ✓` });
+    } else if (adding === "period") {
+      const date = parsePeriod(v);
+      if (!Number.isFinite(date)) return setMsg({ type: "error", text: "Enter a valid period (e.g. 2010-01)." });
+      if (dates.includes(date)) return setMsg({ type: "error", text: `Period "${v}" already exists.` });
+      addPeriod(date);
+      setMsg({ type: "ok", text: `Added period "${v}" ✓` });
+    }
+    cancelAdd();
   }
 
   return (
     <div className="data-panel">
       <div className="data-toolbar">
-        <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
+        <button
+          type="button"
+          className="btn"
+          title="Upload a .csv, .tsv, .txt or .json file"
+          onClick={() => fileRef.current?.click()}
+        >
           Upload file
         </button>
         <button type="button" className="btn" onClick={() => setPasteOpen((o) => !o)}>
@@ -108,8 +132,20 @@ export function DataPanel() {
           Load sample
         </button>
         <span className="data-toolbar__spacer" />
-        <button type="button" className="btn" onClick={onAddEntity}>+ Entity</button>
-        <button type="button" className="btn" onClick={onAddPeriod}>+ Period</button>
+        <button
+          type="button"
+          className={`btn ${adding === "entity" ? "is-active" : ""}`}
+          onClick={() => (adding === "entity" ? cancelAdd() : startAdd("entity"))}
+        >
+          + Entity
+        </button>
+        <button
+          type="button"
+          className={`btn ${adding === "period" ? "is-active" : ""}`}
+          onClick={() => (adding === "period" ? cancelAdd() : startAdd("period"))}
+        >
+          + Period
+        </button>
         <input
           ref={fileRef}
           type="file"
@@ -118,6 +154,29 @@ export function DataPanel() {
           onChange={onFile}
         />
       </div>
+      <p className="data-upload-hint">Upload accepts CSV, TSV, or JSON — or paste data below.</p>
+
+      {adding && (
+        <div className="add-box">
+          <input
+            autoFocus
+            className="text-input"
+            value={addValue}
+            placeholder={adding === "entity" ? "Entity name" : isMonthly ? "YYYY-MM (e.g. 2010-01)" : "Year (e.g. 2010)"}
+            onChange={(e) => setAddValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitAdd();
+              if (e.key === "Escape") cancelAdd();
+            }}
+          />
+          <button type="button" className="btn btn--primary" onClick={commitAdd}>
+            Add {adding === "entity" ? "entity" : "period"}
+          </button>
+          <button type="button" className="btn" onClick={cancelAdd}>
+            Cancel
+          </button>
+        </div>
+      )}
 
       {pasteOpen && (
         <div className="paste-box">

@@ -835,6 +835,26 @@ button {
 .data-toolbar__spacer {
   flex: 1;
 }
+.data-toolbar .btn.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-weak);
+}
+.data-upload-hint {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin: -4px 0 10px;
+}
+.add-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.add-box .text-input {
+  flex: 1;
+  min-width: 0;
+}
 .paste-box {
   margin-bottom: 10px;
   border: 1px solid var(--border);

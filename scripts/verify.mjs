@@ -145,6 +145,32 @@ if (dl && !dl.error) {
   results.video2K = { ok: false, error: dl?.error };
 }
 
+// ---- Compound number format ("1m 32k" / "1b 250m") ----
+const facebookLabel = () => page.textContent('[data-name="Facebook"] [data-role="value"]');
+await page.evaluate(() => {
+  const s = window.__studio.getState();
+  s.pause();
+  s.updateConfig({ numberFormat: "compound" });
+  s.seek01(0.9); // Facebook in the hundreds of millions
+});
+await page.waitForTimeout(120);
+const millionsLabel = (await facebookLabel())?.trim();
+// Force a billions value on the final frame and re-read.
+await page.evaluate(() => {
+  const s = window.__studio.getState();
+  const dates = [...new Set(s.rows.map((r) => r.date))].sort((a, b) => a - b);
+  s.updateCell("Facebook", dates[dates.length - 1], 1_250_500_000);
+  s.seek01(1);
+});
+await page.waitForTimeout(120);
+const billionsLabel = (await facebookLabel())?.trim();
+results.compound = {
+  millions: millionsLabel,
+  millionsOk: /^\d+m( \d+k)?$/.test(millionsLabel ?? ""),
+  billions: billionsLabel,
+  billionsOk: billionsLabel === "1b 250m",
+};
+
 await browser.close();
 results.consoleErrors = consoleErrors;
 console.log(JSON.stringify(results, null, 2));
@@ -164,5 +190,7 @@ const pass =
   results.exportSvg.hasFontFace === true &&
   results.has2K === true &&
   results.video2K.ok === true &&
+  results.compound.millionsOk === true &&
+  results.compound.billionsOk === true &&
   consoleErrors.length === 0;
 process.exit(pass ? 0 : 1);

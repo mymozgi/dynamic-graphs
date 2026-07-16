@@ -46,7 +46,6 @@ const DEFAULT_CONFIG: ChartConfig = {
   dateFormat: "monthYear",
 
   numberFormat: ",.0f",
-  compactNumbers: false,
   prefix: "",
   suffix: "",
 

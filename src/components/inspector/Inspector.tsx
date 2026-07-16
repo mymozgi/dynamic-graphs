@@ -37,6 +37,8 @@ const FONTS = [
 const FORMATS = [
   { value: ",.0f", label: "1,234,567" },
   { value: ",.2f", label: "1,234,567.89" },
+  { value: "compact", label: "1.2M" },
+  { value: "compound", label: "1m 32k" },
 ];
 
 export function Inspector() {
@@ -340,17 +342,9 @@ export function Inspector() {
       </Section>
 
       <Section title="Format">
-        <Field label="Compact" hint="Abbreviate as K / M / B / T">
-          <Toggle
-            checked={config.compactNumbers}
-            onChange={(v) => update({ compactNumbers: v })}
-          />
+        <Field label="Number" stack>
+          <Select value={config.numberFormat} options={FORMATS} onChange={(v) => update({ numberFormat: v })} />
         </Field>
-        {!config.compactNumbers && (
-          <Field label="Number" stack>
-            <Select value={config.numberFormat} options={FORMATS} onChange={(v) => update({ numberFormat: v })} />
-          </Field>
-        )}
         <Field label="Prefix">
           <TextInput value={config.prefix} placeholder="$" onChange={(v) => update({ prefix: v })} />
         </Field>

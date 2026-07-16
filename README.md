@@ -58,7 +58,7 @@ fonts embedded at export time), rasterized through one canvas path:
 | Header | text, size, alignment |
 | Background | canvas color override |
 | Padding | **Top / Right / Bottom / Left** canvas insets |
-| Format | compact K/M/B/T toggle, number style, prefix / suffix |
+| Format | number style — full / compact (1.2M) / compound (1m 32k), prefix / suffix |
 | Animation | bar-motion easing (linear / smooth / in / out), duration, speed |
 
 **Data** — a "Data" tab with an editable spreadsheet and **import**:

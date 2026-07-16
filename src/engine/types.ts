@@ -100,8 +100,8 @@ export interface ChartConfig {
   dateFormat: "year" | "monthYear";
 
   // Formatting
-  numberFormat: string; // d3-format spec
-  compactNumbers: boolean; // abbreviate as K / M / B / T
+  /** d3-format spec, or a sentinel: "compact" (1.2M) / "compound" (1m 32k). */
+  numberFormat: string;
   prefix: string;
   suffix: string;
 

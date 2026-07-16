@@ -3,7 +3,7 @@ import { scaleLinear } from "d3-scale";
 import { useStudioStore, selectT01 } from "@/store/useStudioStore";
 import { getChartTokens } from "@/theme/tokens";
 import { makeColorResolver } from "@/theme/palettes";
-import { makeFormatter, compactNumber } from "@/utils/format";
+import { makeFormatter, compactNumber, compoundNumber } from "@/utils/format";
 import { formatDate } from "@/utils/period";
 import { resolveIso } from "@/data/countries";
 import { getFlagDataUri } from "@/data/flagRegistry";
@@ -31,11 +31,11 @@ export function BarChartRace({ width, height }: Props) {
   );
 
   const fmtValue = useMemo(() => {
-    if (config.compactNumbers) {
-      return (n: number) => `${config.prefix}${compactNumber(n)}${config.suffix}`;
-    }
-    return makeFormatter(config.numberFormat, config.prefix, config.suffix);
-  }, [config.compactNumbers, config.numberFormat, config.prefix, config.suffix]);
+    const { numberFormat, prefix, suffix } = config;
+    if (numberFormat === "compact") return (n: number) => `${prefix}${compactNumber(n)}${suffix}`;
+    if (numberFormat === "compound") return (n: number) => `${prefix}${compoundNumber(n)}${suffix}`;
+    return makeFormatter(numberFormat, prefix, suffix);
+  }, [config.numberFormat, config.prefix, config.suffix]);
 
   // ---- Layout ----------------------------------------------------------
   const longestName = useMemo(

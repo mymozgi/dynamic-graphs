@@ -87,6 +87,43 @@ export function downloadBlob(blob: Blob, fileName: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+export interface SavedFile {
+  write: (b: Blob) => Promise<void>;
+}
+
+/**
+ * Open the "save file" picker (folder + name) up-front — must be called within
+ * a user gesture, BEFORE any long async work. Returns a writer, "cancelled",
+ * or null when the File System Access API is unavailable (fall back to download).
+ */
+export async function pickSaveFile(
+  suggestedName: string,
+  accept: Record<string, string[]>,
+): Promise<SavedFile | "cancelled" | null> {
+  const picker = (
+    window as unknown as {
+      showSaveFilePicker?: (opts: {
+        suggestedName?: string;
+        types?: { accept: Record<string, string[]> }[];
+      }) => Promise<{ createWritable: () => Promise<{ write: (b: Blob) => Promise<void>; close: () => Promise<void> }> }>;
+    }
+  ).showSaveFilePicker;
+  if (!picker) return null;
+  try {
+    const handle = await picker({ suggestedName, types: [{ accept }] });
+    return {
+      write: async (b: Blob) => {
+        const w = await handle.createWritable();
+        await w.write(b);
+        await w.close();
+      },
+    };
+  } catch (e) {
+    if ((e as DOMException).name === "AbortError") return "cancelled";
+    return null;
+  }
+}
+
 export async function exportPNG(
   svg: SVGSVGElement,
   { scale, transparent, fontCss, fileName }: { scale: number; transparent: boolean; fontCss: string; fileName: string },

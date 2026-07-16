@@ -6,6 +6,7 @@ import { buildEmbeddedFontCss } from "@/export/fontEmbed";
 import {
   copyPNGToClipboard,
   downloadBlob,
+  pickSaveFile,
   exportJPG,
   exportPNG,
   exportSVGFile,
@@ -90,6 +91,12 @@ export function ExportSection() {
     const svg = getRaceSvg();
     if (!svg) return;
     if (!pickMimeType()) return setStatus({ msg: "WebM not supported in this browser" });
+
+    // Ask WHERE to save first — the folder picker needs a fresh user gesture,
+    // and recording takes a while (would be too late to ask afterwards).
+    const target = await pickSaveFile("chart-race.webm", { "video/webm": [".webm"] });
+    if (target === "cancelled") return setStatus({ msg: "Cancelled" });
+
     pause();
     const ac = new AbortController();
     abortRef.current = ac;
@@ -115,8 +122,13 @@ export function ExportSection() {
         onProgress: ({ frame, total }) => setProgress(frame / total),
         signal: ac.signal,
       });
-      downloadBlob(blob, "chart-race.webm");
-      setStatus({ msg: "Video downloaded ✓", ok: true });
+      if (target) {
+        await target.write(blob);
+        setStatus({ msg: "Video saved ✓", ok: true });
+      } else {
+        downloadBlob(blob, "chart-race.webm");
+        setStatus({ msg: "Video downloaded ✓", ok: true });
+      }
     } catch (e) {
       if ((e as DOMException).name === "AbortError") setStatus({ msg: "Cancelled" });
       else {
@@ -234,7 +246,7 @@ export function ExportSection() {
       ) : (
         <div className="btn-row">
           <button type="button" className="btn btn--primary" onClick={handleRecord} disabled={busy}>
-            Render & download ({duration}s)
+            Render & save ({duration}s)
           </button>
         </div>
       )}

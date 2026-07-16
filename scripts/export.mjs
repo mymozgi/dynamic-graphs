@@ -30,7 +30,14 @@ const url = args.url || "http://localhost:5173/";
 // 1) Find the newest chart-config*.json (Downloads first, then project).
 function newestConfig() {
   if (args.config) return args.config;
-  const dirs = [join(homedir(), "Downloads"), process.cwd()];
+  const dirs = [
+    join(homedir(), "Downloads"),
+    join(homedir(), "OneDrive", "Downloads"),
+    join(homedir(), "Desktop"),
+    join(homedir(), "OneDrive", "Desktop"),
+    join(homedir(), "OneDrive", "Рабочий стол"),
+    process.cwd(),
+  ];
   let best = null;
   let bestT = 0;
   for (const dir of dirs) {

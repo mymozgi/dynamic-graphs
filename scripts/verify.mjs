@@ -11,6 +11,12 @@ const page = await browser.newPage({ viewport: { width: 1360, height: 900 } });
 page.on("console", (m) => m.type() === "error" && consoleErrors.push(m.text()));
 page.on("pageerror", (e) => consoleErrors.push("pageerror: " + e));
 
+// Headless has no save-file picker UI — force the download fallback so the
+// video export test can capture the result (real Chrome/Edge shows the picker).
+await page.addInitScript(() => {
+  window.showSaveFilePicker = undefined;
+});
+
 await page.goto(URL, { waitUntil: "networkidle" });
 await page.waitForSelector("#race-svg [data-name]");
 
@@ -157,7 +163,7 @@ await page.getByRole("button", { name: "2K", exact: true }).click();
 await page.locator(".field", { hasText: "Frame rate" }).locator("select").selectOption("24");
 const [dl] = await Promise.all([
   page.waitForEvent("download", { timeout: 40000 }),
-  page.getByRole("button", { name: /Render & download/ }).click(),
+  page.getByRole("button", { name: /Render & save/ }).click(),
 ]).catch((e) => [{ error: String(e) }]);
 if (dl && !dl.error) {
   const p = `${OUT}/race-2k.webm`;

@@ -12,6 +12,8 @@ import {
   getRaceSvg,
 } from "@/export/exportImage";
 import { pickMimeType, recordWebM } from "@/export/exportVideo";
+import { getAspect } from "@/constants/aspects";
+import { getStudioSnapshot } from "@/store/useStudioStore";
 
 type ImgFormat = "png" | "jpg" | "svg";
 
@@ -21,6 +23,7 @@ export function ExportSection() {
   const duration = useStudioStore((s) => s.playback.duration);
   const pause = useStudioStore((s) => s.pause);
   const seek01 = useStudioStore((s) => s.seek01);
+  const aspectId = useStudioStore((s) => s.aspectId);
 
   const [format, setFormat] = useState<ImgFormat>("png");
   const [scale, setScale] = useState(2);
@@ -30,6 +33,7 @@ export function ExportSection() {
 
   const [fps, setFps] = useState(30);
   const [videoHeight, setVideoHeight] = useState(1080); // target export height (px)
+  const [bpp, setBpp] = useState(0.15); // bits per pixel per frame (quality tier)
   const [recording, setRecording] = useState(false);
   const [progress, setProgress] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
@@ -37,6 +41,10 @@ export function ExportSection() {
   const bgColor = config.canvasBg ?? (theme === "dark" ? "#0b0f14" : "#ffffff");
   const allowTransparent = format !== "jpg";
   const useTransparent = allowTransparent && transparent;
+
+  const outW = Math.round(videoHeight * getAspect(aspectId).ratio);
+  const estMbps = Math.min(80, Math.round((outW * videoHeight * fps * bpp) / 1e6));
+  const videoSummary = `${outW}×${videoHeight} · ${fps} fps · ~${estMbps} Mbps`;
 
   async function handleDownload() {
     const svg = getRaceSvg();
@@ -90,15 +98,19 @@ export function ExportSection() {
     setStatus({ msg: "Rendering video…" });
     try {
       const fontCss = await buildEmbeddedFontCss(config.fontFamily);
-      // Scale the canvas so the output reaches the chosen height (e.g. 2K).
+      // Scale the canvas so the output reaches the chosen height (e.g. 4K).
+      const canvasW = Number(svg.getAttribute("width")) || 1280;
       const canvasH = Number(svg.getAttribute("height")) || 720;
-      const scale = Math.max(0.5, Math.min(4, videoHeight / canvasH));
+      const scale = Math.max(0.5, Math.min(8, videoHeight / canvasH));
+      const pixels = canvasW * scale * canvasH * scale;
+      const bitrate = Math.min(80_000_000, Math.round(pixels * fps * bpp));
       const blob = await recordWebM(svg, {
         fps,
         scale,
         duration,
         fillBg: bgColor,
         fontCss,
+        bitrate,
         seek: (t) => seek01(t),
         onProgress: ({ frame, total }) => setProgress(frame / total),
         signal: ac.signal,
@@ -116,6 +128,14 @@ export function ExportSection() {
       abortRef.current = null;
       seek01(0);
     }
+  }
+
+  function handleExportConfig() {
+    const blob = new Blob([JSON.stringify(getStudioSnapshot(), null, 2)], {
+      type: "application/json",
+    });
+    downloadBlob(blob, "chart-config.json");
+    setStatus({ msg: "Config saved — run: npm run render", ok: true });
   }
 
   return (
@@ -170,20 +190,35 @@ export function ExportSection() {
             { value: "24", label: "24 fps" },
             { value: "30", label: "30 fps" },
             { value: "60", label: "60 fps" },
+            { value: "120", label: "120 fps" },
           ]}
         />
       </Field>
-      <Field label="Quality">
+      <Field label="Resolution" stack>
         <Segmented<string>
+          full
           value={String(videoHeight)}
           onChange={(v) => setVideoHeight(Number(v))}
           options={[
             { value: "720", label: "720p" },
             { value: "1080", label: "1080p" },
             { value: "1440", label: "2K" },
+            { value: "2160", label: "4K" },
           ]}
         />
       </Field>
+      <Field label="Bitrate" hint="Higher = cleaner source for editing">
+        <Segmented<string>
+          value={String(bpp)}
+          onChange={(v) => setBpp(Number(v))}
+          options={[
+            { value: "0.08", label: "Std" },
+            { value: "0.15", label: "High" },
+            { value: "0.3", label: "Max" },
+          ]}
+        />
+      </Field>
+      <div className="export-status">{videoSummary}</div>
 
       {recording ? (
         <>
@@ -203,6 +238,18 @@ export function ExportSection() {
           </button>
         </div>
       )}
+
+      <div className="export-divider" />
+      <div className="export-subhead">Offline render · long videos</div>
+      <p className="export-status">
+        For 10+ min or MP4/ProRes: export this config, then run
+        <code> npm run render</code> (uses FFmpeg, no browser limits).
+      </p>
+      <div className="btn-row">
+        <button type="button" className="btn" onClick={handleExportConfig}>
+          Config (JSON)
+        </button>
+      </div>
 
       {status && <div className={`export-status ${status.ok ? "is-ok" : ""}`}>{status.msg}</div>}
     </Section>

@@ -39,9 +39,14 @@ fonts embedded at export time), rasterized through one canvas path:
 - **JPG** — flattened onto the canvas background
 - **SVG** — vector, portable (fonts + flags embedded)
 - **Copy PNG** to clipboard
-- **WebM video** — frame-by-frame via `MediaRecorder` + `captureStream`,
-  with frame-rate and **resolution up to 2K** (720p / 1080p / 2K) plus a
-  progress bar (MP4/GIF via FFmpeg.wasm is a follow-on)
+- **WebM video** — frame-by-frame via `MediaRecorder` + `captureStream`, with
+  **frame-rate up to 120 fps**, **resolution up to 4K** (720p / 1080p / 2K / 4K),
+  and a **bitrate** tier (Std / High / Max), plus a live output summary and a
+  progress bar
+- **Offline renderer** (`npm run render`) for **long videos** (10–20+ min) —
+  exports the config as JSON, then drives the app headless and pipes frames to
+  **FFmpeg → MP4 / ProRes / WebM / PNG-sequence**, with no browser tab or
+  memory limits. See [scripts/README](scripts/README.md#rendermjs--offline-video-renderer).
 
 **Inspector** (right panel) — live controls wired to the chart:
 

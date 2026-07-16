@@ -8,3 +8,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <App />
   </React.StrictMode>,
 );
+
+// Dev-only: expose the offline-render bridge for scripts/render.mjs.
+if (import.meta.env.DEV) {
+  import("./export/renderApi").then((m) => m.installRenderApi());
+}

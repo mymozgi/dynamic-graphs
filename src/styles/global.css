@@ -803,6 +803,14 @@ button {
 .export-status.is-ok {
   color: var(--accent);
 }
+.export-status code {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 11px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
 .progress {
   height: 8px;
   border-radius: 6px;

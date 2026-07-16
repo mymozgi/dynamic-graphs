@@ -58,14 +58,16 @@ export function BarChartRace({ width, height }: Props) {
   const flagH = Math.min(barHeight * config.flagScale, barHeight);
   const flagW = flagH * 1.35;
   const iconOutside = config.flagPosition === "outside";
+  const pIn = config.paddingInside; // content inset inside a bar
+  const pOut = config.paddingOutside; // gap from bar end to outside content
 
   // Right margin adapts to the widest value label (using the *global* max so
   // it stays stable during playback) plus any outside icon.
   const outsideLabel = config.showDataLabels && config.labelPosition === "outside";
   let contentRight = outsideLabel
-    ? fmtValue(engine.globalMax).length * config.labelFontSize * 0.62 + 14
+    ? fmtValue(engine.globalMax).length * config.labelFontSize * 0.62 + pOut + 6
     : 18;
-  if (config.showFlags && iconOutside) contentRight += flagW + 12;
+  if (config.showFlags && iconOutside) contentRight += flagW + pOut;
   const marginRight = config.padRight + contentRight;
 
   const plotLeft = marginLeft;
@@ -161,17 +163,17 @@ export function BarChartRace({ width, height }: Props) {
           const iconUri = config.showFlags
             ? (customImg ?? getFlagDataUri(resolveIso(e.name)))
             : null;
-          const flagVisible = !!iconUri && (iconOutside || barW > flagW + 8);
+          const flagVisible = !!iconUri && (iconOutside || barW > flagW + pIn + 3);
           // Inside icon alignment: left / center / right within the bar.
           let flagX: number;
           if (iconOutside) {
-            flagX = barEnd + 8;
+            flagX = barEnd + pOut;
           } else if (config.iconAlign === "left") {
-            flagX = plotLeft + 5;
+            flagX = plotLeft + pIn;
           } else if (config.iconAlign === "center") {
             flagX = plotLeft + barW / 2 - flagW / 2;
           } else {
-            flagX = barEnd - flagW - 5;
+            flagX = barEnd - flagW - pIn;
           }
           flagX = Math.max(plotLeft + 3, flagX);
           const iconAtEnd = !iconOutside && flagVisible && config.iconAlign === "right";
@@ -180,19 +182,19 @@ export function BarChartRace({ width, height }: Props) {
           // auto-flipped outside when the bar is too short to hold the text.
           const labelText = fmtValue(e.value);
           const estTextW = labelText.length * config.labelFontSize * 0.6;
-          const insideFlagW = iconAtEnd ? flagW + 8 : 0;
-          const fitsInside = estTextW <= barW - 16 - insideFlagW;
+          const insideFlagW = iconAtEnd ? flagW + pIn : 0;
+          const fitsInside = estTextW <= barW - pIn * 2 - insideFlagW;
           const placeOutside = config.labelPosition === "outside" || !fitsInside;
 
           let valueX: number;
           let valueAnchor: "start" | "end" | "middle" = "start";
           let valueFill = tokens.text;
           if (placeOutside) {
-            valueX = iconOutside && flagVisible ? flagX + flagW + 8 : barEnd + 8;
+            valueX = iconOutside && flagVisible ? flagX + flagW + pOut : barEnd + pOut;
           } else if (config.labelPosition === "right") {
             valueAnchor = "end";
             valueFill = tokens.labelInside;
-            valueX = iconAtEnd ? flagX - 6 : barEnd - 8;
+            valueX = iconAtEnd ? flagX - pIn : barEnd - pIn;
           } else if (config.labelPosition === "middle") {
             valueAnchor = "middle";
             valueFill = tokens.labelInside;
@@ -200,7 +202,7 @@ export function BarChartRace({ width, height }: Props) {
           } else {
             // left
             valueFill = tokens.labelInside;
-            valueX = plotLeft + 8;
+            valueX = plotLeft + pIn;
           }
 
           return (
@@ -238,14 +240,16 @@ export function BarChartRace({ width, height }: Props) {
                     clipPath="url(#flag-clip)"
                     preserveAspectRatio={customImg ? "xMidYMid meet" : "xMidYMid slice"}
                   />
-                  <rect
-                    width={flagW}
-                    height={flagH}
-                    rx={2.5}
-                    fill="none"
-                    stroke="rgba(0,0,0,0.18)"
-                    strokeWidth={1}
-                  />
+                  {config.iconBorder && (
+                    <rect
+                      width={flagW}
+                      height={flagH}
+                      rx={2.5}
+                      fill="none"
+                      stroke="rgba(0,0,0,0.18)"
+                      strokeWidth={1}
+                    />
+                  )}
                 </g>
               )}
 

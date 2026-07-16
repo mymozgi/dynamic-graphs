@@ -18,6 +18,8 @@ export interface RecordOptions {
   duration: number;
   fillBg: string;
   fontCss: string;
+  /** Target video bitrate in bits/sec (higher = cleaner for re-editing). */
+  bitrate: number;
   seek: (t01: number) => void;
   onProgress?: (p: VideoProgress) => void;
   signal?: AbortSignal;
@@ -60,7 +62,7 @@ export async function recordWebM(svg: SVGSVGElement, opts: RecordOptions): Promi
   const track = stream.getVideoTracks()[0] as FrameTrack;
 
   const chunks: Blob[] = [];
-  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 12_000_000 });
+  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: opts.bitrate });
   recorder.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data);
 
   const total = Math.max(2, Math.round(opts.fps * opts.duration));

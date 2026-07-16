@@ -5,6 +5,18 @@ import { getSampleRows } from "@/data/sampleData";
 
 export type ColorBy = "name" | "category";
 
+/** A complete, serializable studio state — used for config export + offline render. */
+export interface StudioSnapshot {
+  version: number;
+  rows: RaceRow[];
+  config: ChartConfig;
+  easing: EasingMode;
+  colorBy: ColorBy;
+  theme: ThemeMode;
+  aspectId: string;
+  duration: number;
+}
+
 const FRAMES_PER_TRANSITION = 24;
 
 const DEFAULT_CONFIG: ChartConfig = {
@@ -18,6 +30,8 @@ const DEFAULT_CONFIG: ChartConfig = {
   barOpacity: 1,
   barCornerRadius: 6,
   barPadding: 0.28,
+  paddingInside: 6,
+  paddingOutside: 8,
   barColors: {},
 
   showDataLabels: true,
@@ -29,6 +43,7 @@ const DEFAULT_CONFIG: ChartConfig = {
   flagScale: 0.7,
   flagPosition: "inside",
   iconAlign: "right",
+  iconBorder: true,
   barImages: {},
 
   padTop: 16,
@@ -79,6 +94,7 @@ interface StudioState {
   addEntity: (name: string) => void;
   addPeriod: (date: number) => void;
   removeEntity: (name: string) => void;
+  loadState: (snap: StudioSnapshot) => void;
 
   // canvas
   setAspect: (id: string) => void;
@@ -151,6 +167,18 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   },
 
   loadSample: () => get().setRows(getSampleRows()),
+
+  loadState: (snap) =>
+    set((s) => ({
+      rows: snap.rows,
+      engine: buildEngine(snap.rows, snap.easing),
+      config: snap.config,
+      easing: snap.easing,
+      colorBy: snap.colorBy,
+      theme: snap.theme,
+      aspectId: snap.aspectId,
+      playback: { ...s.playback, duration: snap.duration, time: 0, playing: false },
+    })),
 
   addEntity: (name) => {
     const clean = name.trim();
@@ -233,6 +261,21 @@ export const useStudioStore = create<StudioState>((set, get) => ({
 /** Convenience selector: normalized timeline position (0..1). */
 export const selectT01 = (s: StudioState) =>
   s.playback.duration > 0 ? s.playback.time / s.playback.duration : 0;
+
+/** Serialize the full studio state (data + all settings) for export / render. */
+export function getStudioSnapshot(): StudioSnapshot {
+  const s = useStudioStore.getState();
+  return {
+    version: 1,
+    rows: s.rows,
+    config: s.config,
+    easing: s.easing,
+    colorBy: s.colorBy,
+    theme: s.theme,
+    aspectId: s.aspectId,
+    duration: s.playback.duration,
+  };
+}
 
 // Dev-only: expose the store for debugging + automated verification.
 if (import.meta.env.DEV) {

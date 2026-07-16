@@ -146,6 +146,22 @@ export function Inspector() {
             onChange={(v) => update({ barPadding: v / 100 })}
           />
         </Field>
+        <Field label="Inner Padding" hint="Space inside the bar (icon & inside labels)">
+          <Slider
+            value={config.paddingInside}
+            min={0}
+            max={40}
+            onChange={(v) => update({ paddingInside: v })}
+          />
+        </Field>
+        <Field label="Outer Padding" hint="Gap between the bar and the outside label">
+          <Slider
+            value={config.paddingOutside}
+            min={0}
+            max={40}
+            onChange={(v) => update({ paddingOutside: v })}
+          />
+        </Field>
         <Field label="Icons">
           <Toggle checked={config.showFlags} onChange={(v) => update({ showFlags: v })} />
         </Field>
@@ -183,6 +199,9 @@ export function Inspector() {
                 />
               </Field>
             )}
+            <Field label="Icon Border">
+              <Toggle checked={config.iconBorder} onChange={(v) => update({ iconBorder: v })} />
+            </Field>
             <BarImageList />
           </>
         )}

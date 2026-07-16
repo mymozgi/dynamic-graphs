@@ -64,6 +64,10 @@ export interface ChartConfig {
   barOpacity: number; // 0..1
   barCornerRadius: number; // px
   barPadding: number; // 0..0.9 (gap between bars as ratio)
+  /** px inset for content inside the bar (icon + inside labels from edges). */
+  paddingInside: number;
+  /** px gap between the bar end and outside content (value label / icon). */
+  paddingOutside: number;
   /** Per-entity color overrides (by name); wins over the palette. */
   barColors: Record<string, string>;
 
@@ -79,6 +83,8 @@ export interface ChartConfig {
   flagPosition: "inside" | "outside";
   /** Horizontal alignment of an inside icon within the bar. */
   iconAlign: "left" | "center" | "right";
+  /** Thin outline drawn around each icon. */
+  iconBorder: boolean;
   /** Per-entity custom images (data URLs); override the auto flag. */
   barImages: Record<string, string>;
 

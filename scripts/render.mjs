@@ -63,10 +63,12 @@ const snapshot = JSON.parse(readFileSync(configPath, "utf8"));
 
 function ffmpegArgs() {
   const base = ["-y", "-f", "image2pipe", "-framerate", String(fps), "-i", "-"];
+  // Force even dimensions — libx264/vp9 (yuv420p) reject odd width/height.
+  const evenScale = ["-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2"];
   const codec = {
-    mp4: ["-c:v", "libx264", "-crf", "16", "-preset", "medium", "-pix_fmt", "yuv420p"],
-    mov: ["-c:v", "prores_ks", "-profile:v", "3", "-pix_fmt", "yuv422p10le"],
-    webm: ["-c:v", "libvpx-vp9", "-crf", "20", "-b:v", "0", "-pix_fmt", "yuv420p"],
+    mp4: ["-c:v", "libx264", "-crf", "16", "-preset", "medium", ...evenScale, "-pix_fmt", "yuv420p"],
+    mov: ["-c:v", "prores_ks", "-profile:v", "3", ...evenScale, "-pix_fmt", "yuv422p10le"],
+    webm: ["-c:v", "libvpx-vp9", "-crf", "20", "-b:v", "0", ...evenScale, "-pix_fmt", "yuv420p"],
   }[format];
   if (!codec) {
     console.error(`Unknown --format "${format}". Use mp4 | mov | webm | png.`);

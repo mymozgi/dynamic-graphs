@@ -11,6 +11,12 @@ dist-ssr
 # Verification output (screenshots / exported files, generated)
 scripts/out/
 
+# Rendered video / frame output (npm run render)
+*.mp4
+*.mov
+*.webm
+/frames/
+
 # Logs
 logs
 *.log

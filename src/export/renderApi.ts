@@ -27,6 +27,12 @@ export function installRenderApi() {
           height: Number(svg?.getAttribute("height")) || 0,
         };
       },
+      // Fast path for the offline renderer: just move the clock + repaint, then
+      // the Node side grabs the frame with element.screenshot() (native, quick).
+      async seek(t01: number) {
+        useStudioStore.getState().seek01(t01);
+        await doubleRaf();
+      },
       fontCss() {
         return buildEmbeddedFontCss(useStudioStore.getState().config.fontFamily);
       },

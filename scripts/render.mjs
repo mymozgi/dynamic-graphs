@@ -63,12 +63,12 @@ const snapshot = JSON.parse(readFileSync(configPath, "utf8"));
 
 function ffmpegArgs() {
   const base = ["-y", "-f", "image2pipe", "-framerate", String(fps), "-i", "-"];
-  // Force even dimensions — libx264/vp9 (yuv420p) reject odd width/height.
-  const evenScale = ["-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2"];
+  // Scale to the exact target height; width auto + even (encoders need even dims).
+  const scaleVf = ["-vf", `scale=-2:${height}`];
   const codec = {
-    mp4: ["-c:v", "libx264", "-crf", "16", "-preset", "medium", ...evenScale, "-pix_fmt", "yuv420p"],
-    mov: ["-c:v", "prores_ks", "-profile:v", "3", ...evenScale, "-pix_fmt", "yuv422p10le"],
-    webm: ["-c:v", "libvpx-vp9", "-crf", "20", "-b:v", "0", ...evenScale, "-pix_fmt", "yuv420p"],
+    mp4: ["-c:v", "libx264", "-crf", "16", "-preset", "medium", ...scaleVf, "-pix_fmt", "yuv420p"],
+    mov: ["-c:v", "prores_ks", "-profile:v", "3", ...scaleVf, "-pix_fmt", "yuv422p10le"],
+    webm: ["-c:v", "libvpx-vp9", "-crf", "20", "-b:v", "0", ...scaleVf, "-pix_fmt", "yuv420p"],
   }[format];
   if (!codec) {
     console.error(`Unknown --format "${format}". Use mp4 | mov | webm | png.`);
@@ -91,24 +91,37 @@ if (format !== "png") {
 
 // ---- Render ------------------------------------------------------------
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
-page.on("pageerror", (e) => console.error("page error:", e));
+
+async function openPage(deviceScaleFactor) {
+  const p = await browser.newPage({ viewport: { width: 1920, height: 1200 }, deviceScaleFactor });
+  p.on("pageerror", (e) => console.error("page error:", e));
+  await p.goto(url, { waitUntil: "networkidle" });
+  await p.waitForFunction(() => !!window.__render, null, { timeout: 15000 });
+  await p.evaluate((s) => window.__render.applySnapshot(s), snapshot);
+  await p.waitForTimeout(400);
+  return p;
+}
 
 console.log(`Loading ${url} …`);
-await page.goto(url, { waitUntil: "networkidle" });
-await page.waitForFunction(() => !!window.__render, null, { timeout: 15000 });
-
-await page.evaluate((s) => window.__render.applySnapshot(s), snapshot);
-await page.waitForTimeout(400);
-
-const dims = await page.evaluate(() => window.__render.dims());
-const scale = height / dims.height;
-const outW = Math.round(dims.width * scale);
-const outH = Math.round(dims.height * scale);
-const fontCss = await page.evaluate(() => window.__render.fontCss());
+let page = await openPage(1);
+const dims = await page.evaluate(() => window.__render.dims()); // CSS px
+// Render the element at ~target resolution via deviceScaleFactor, then let
+// element.screenshot() grab it natively (much faster than serialize+base64).
+const dsf = Math.min(4, Math.max(1, height / dims.height));
+if (Math.abs(dsf - 1) > 0.01) {
+  await page.context().close();
+  page = await openPage(dsf);
+}
+const svgEl = await page.$("#race-svg");
+if (!svgEl) {
+  console.error("chart svg (#race-svg) not found");
+  process.exit(1);
+}
 
 const duration = snapshot.duration || 12;
 const total = Math.max(2, Math.round(fps * duration));
+const outH = height;
+const outW = Math.round(((dims.width / dims.height) * height) / 2) * 2;
 console.log(`Rendering ${total} frames · ${outW}×${outH} · ${fps}fps · ${duration}s → ${out} (${format})`);
 
 let ff = null;
@@ -149,11 +162,8 @@ for (let i = 0; i < total; i++) {
     await finish(new Error(`FFmpeg exited early (code ${ffExit}) — check the args/codec above.`));
   }
   const t01 = total === 1 ? 0 : i / (total - 1);
-  const dataUrl = await page.evaluate(
-    ([t, sc, fc]) => window.__render.frame(t, sc, fc),
-    [t01, scale, fontCss],
-  );
-  const buf = Buffer.from(dataUrl.split(",")[1], "base64");
+  await page.evaluate((t) => window.__render.seek(t), t01);
+  const buf = await svgEl.screenshot({ type: "png" });
   if (framesDir) {
     writeFileSync(`${framesDir}/frame_${String(i).padStart(6, "0")}.png`, buf);
   } else if (!ff.stdin.write(buf)) {

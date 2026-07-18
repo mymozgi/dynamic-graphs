@@ -37,6 +37,15 @@ export function BarChartRace({ width, height }: Props) {
     return makeFormatter(numberFormat, prefix, suffix);
   }, [config.numberFormat, config.prefix, config.suffix]);
 
+  // Measure real label widths (canvas) so the right margin fits the value
+  // exactly — a char-count estimate under-sizes wide labels like "1b 683m".
+  const measureLabel = useMemo(() => {
+    const ctx = document.createElement("canvas").getContext("2d");
+    const font = `600 ${config.labelFontSize}px ${config.fontFamily}, sans-serif`;
+    return (text: string) =>
+      ctx ? ((ctx.font = font), ctx.measureText(text).width) : text.length * config.labelFontSize * 0.62;
+  }, [config.labelFontSize, config.fontFamily]);
+
   // ---- Layout ----------------------------------------------------------
   const longestName = useMemo(
     () => engine.names.reduce((m, n) => Math.max(m, n.length), 0),
@@ -65,7 +74,7 @@ export function BarChartRace({ width, height }: Props) {
   // it stays stable during playback) plus any outside icon.
   const outsideLabel = config.showDataLabels && config.labelPosition === "outside";
   let contentRight = outsideLabel
-    ? fmtValue(engine.globalMax).length * config.labelFontSize * 0.62 + pOut + 6
+    ? measureLabel(fmtValue(engine.globalMax)) + pOut + 14
     : 18;
   if (config.showFlags && iconOutside) contentRight += flagW + pOut;
   const marginRight = config.padRight + contentRight;
@@ -181,7 +190,7 @@ export function BarChartRace({ width, height }: Props) {
           // Value label placement — kept clear of an end-aligned flag, and
           // auto-flipped outside when the bar is too short to hold the text.
           const labelText = fmtValue(e.value);
-          const estTextW = labelText.length * config.labelFontSize * 0.6;
+          const estTextW = measureLabel(labelText);
           const insideFlagW = iconAtEnd ? flagW + pIn : 0;
           const fitsInside = estTextW <= barW - pIn * 2 - insideFlagW;
           const placeOutside = config.labelPosition === "outside" || !fitsInside;

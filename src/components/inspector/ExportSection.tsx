@@ -147,7 +147,7 @@ export function ExportSection() {
       type: "application/json",
     });
     downloadBlob(blob, "chart-config.json");
-    setStatus({ msg: "Config saved — run: npm run render", ok: true });
+    setStatus({ msg: "Config saved — now run: npm run export", ok: true });
   }
 
   return (
@@ -192,7 +192,8 @@ export function ExportSection() {
       </div>
 
       <div className="export-divider" />
-      <div className="export-subhead">Video · WebM</div>
+      <div className="export-subhead">Video · WebM (in-browser)</div>
+      <p className="export-status">Saves to a folder you choose. Best for short clips.</p>
 
       <Field label="Frame rate">
         <Select<string>
@@ -252,14 +253,15 @@ export function ExportSection() {
       )}
 
       <div className="export-divider" />
-      <div className="export-subhead">Offline render · long videos</div>
+      <div className="export-subhead">Offline render · MP4 / ProRes · any length</div>
       <p className="export-status">
-        For 10+ min or MP4/ProRes: export this config, then run
-        <code> npm run render</code> (uses FFmpeg, no browser limits).
+        For MP4 / ProRes or long videos (10–20 min), save this config, then run
+        <code> npm run export</code> — it finds the file, renders via FFmpeg
+        (no browser limits) and opens the folder. MP4 stays near-lossless (CRF 16).
       </p>
       <div className="btn-row">
-        <button type="button" className="btn" onClick={handleExportConfig}>
-          Config (JSON)
+        <button type="button" className="btn btn--primary" onClick={handleExportConfig}>
+          1. Save config (JSON)
         </button>
       </div>
 

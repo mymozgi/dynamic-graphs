@@ -11,11 +11,12 @@ dist-ssr
 # Verification output (screenshots / exported files, generated)
 scripts/out/
 
-# Rendered video / frame output (npm run render/export)
+# Rendered video / frame output (npm run render/export + one-click /api/render)
 *.mp4
 *.mov
 *.webm
 /frames/
+/renders/
 
 # Exported chart config (user data, downloaded from the app)
 chart-config*.json

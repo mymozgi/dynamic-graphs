@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStudioStore } from "@/store/useStudioStore";
 import { Section } from "@/components/ui/Section";
 import { Field, Segmented, Select, Toggle } from "@/components/ui/controls";
@@ -40,6 +40,19 @@ export function ExportSection() {
   const [recording, setRecording] = useState(false);
   const [progress, setProgress] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
+
+  // One-click offline render (dev server does the FFmpeg work — see vite.config).
+  const [serverAvailable, setServerAvailable] = useState(false);
+  const [serverBusy, setServerBusy] = useState(false);
+  const [serverPct, setServerPct] = useState(0);
+  const serverAbort = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    fetch("/api/render", { method: "GET" })
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((j) => setServerAvailable(!!j.ok))
+      .catch(() => setServerAvailable(false));
+  }, []);
 
   const bgColor = config.canvasBg ?? (theme === "dark" ? "#0b0f14" : "#ffffff");
   const allowTransparent = format !== "jpg";
@@ -141,6 +154,59 @@ export function ExportSection() {
       setRecording(false);
       abortRef.current = null;
       seek01(0);
+    }
+  }
+
+  async function handleServerRender() {
+    setServerBusy(true);
+    setServerPct(0);
+    setStatus({ msg: "Starting render…" });
+    const ac = new AbortController();
+    serverAbort.current = ac;
+    try {
+      const res = await fetch("/api/render", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ snapshot: getStudioSnapshot(), format: "mp4", fps, height: videoHeight }),
+        signal: ac.signal,
+      });
+      if (!res.body) throw new Error("no stream");
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      let donePath: string | null = null;
+      let errMsg: string | null = null;
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        if (buf.length > 6000) buf = buf.slice(-6000); // markers + progress stay at the tail
+        const di = buf.indexOf("__DONE__");
+        const ei = buf.indexOf("__ERROR__");
+        if (di >= 0) {
+          donePath = buf.slice(di + 8).trim();
+          break;
+        }
+        if (ei >= 0) {
+          errMsg = buf.slice(ei + 9).trim();
+          break;
+        }
+        const m = buf.match(/(\d+)\/(\d+) \((\d+)%\)[^\r\n]*/g);
+        if (m) {
+          const last = m[m.length - 1].trim();
+          setServerPct((Number(last.match(/\((\d+)%\)/)?.[1] ?? 0)) / 100);
+          setStatus({ msg: `Rendering… ${last}` });
+        }
+      }
+      if (errMsg) setStatus({ msg: "Render failed: " + errMsg.split(/[\r\n]/)[0].slice(0, 160) });
+      else if (donePath) setStatus({ msg: `Saved ✓ — opened the folder\n${donePath}`, ok: true });
+      else setStatus({ msg: "Render finished.", ok: true });
+    } catch (e) {
+      if ((e as DOMException).name === "AbortError") setStatus({ msg: "Cancelled" });
+      else setStatus({ msg: "Render server not reachable — is `npm run dev` running?" });
+    } finally {
+      setServerBusy(false);
+      serverAbort.current = null;
     }
   }
 
@@ -278,14 +344,51 @@ export function ExportSection() {
       )}
 
       <div className="export-divider" />
-      <div className="export-subhead">Offline render · MP4 / ProRes · any length</div>
-      <p className="export-status">
-        For MP4 / ProRes or long videos (10–20 min), save this config, then run
-        <code> npm run export</code> — it finds the file, renders via FFmpeg
-        (no browser limits) and opens the folder. MP4 stays near-lossless (CRF 16).
-      </p>
+      <div className="export-subhead">Offline render · MP4 near-lossless · any length</div>
+
+      {serverAvailable ? (
+        <>
+          <p className="export-status">
+            One click: renders on your machine via FFmpeg (no browser limits),
+            saves to the <code>renders</code> folder and opens it. Near-lossless
+            (CRF 16) — handles 10–20 min at full quality. Uses the resolution and
+            frame rate set above.
+          </p>
+          {serverBusy ? (
+            <>
+              <div className="progress">
+                <div className="progress__bar" style={{ width: `${Math.round(serverPct * 100)}%` }} />
+              </div>
+              <div className="btn-row">
+                <button type="button" className="btn" onClick={() => serverAbort.current?.abort()}>
+                  Cancel ({Math.round(serverPct * 100)}%)
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="btn-row">
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={handleServerRender}
+                disabled={busy || recording}
+              >
+                Render MP4 → folder ({duration}s)
+              </button>
+            </div>
+          )}
+        </>
+      ) : (
+        <p className="export-status">
+          For a one-click MP4 render, run <code>npm run dev</code>. Otherwise save
+          this config and run <code>npm run export</code> in a terminal.
+        </p>
+      )}
+
+      <div className="export-divider" />
+      <div className="export-subhead">Backup / move project</div>
       <div className="btn-row">
-        <button type="button" className="btn btn--primary" onClick={handleExportConfig}>
+        <button type="button" className="btn" onClick={handleExportConfig}>
           Save config
         </button>
         <button type="button" className="btn" onClick={() => configFileRef.current?.click()}>

@@ -136,17 +136,49 @@ const buildEngine = (rows: RaceRow[], easing: EasingMode) => {
 const detectDateFormat = (rows: RaceRow[]): "year" | "monthYear" =>
   rows.some((r) => !Number.isInteger(r.date)) ? "monthYear" : "year";
 
-const initialRows = getSampleRows();
+// ---- Local persistence (auto-save your work across reloads) -------------
+const PERSIST_KEY = "chart-studio:v1";
+
+function loadPersisted(): StudioSnapshot | null {
+  try {
+    const raw = localStorage.getItem(PERSIST_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (s && Array.isArray(s.rows) && s.rows.length > 0 && s.config) return s;
+  } catch {
+    /* corrupt / unavailable */
+  }
+  return null;
+}
+
+function savePersisted(snap: StudioSnapshot) {
+  try {
+    localStorage.setItem(PERSIST_KEY, JSON.stringify(snap));
+  } catch {
+    // Likely quota (large bar images) — retry without images so at least the
+    // data + settings survive a reload.
+    try {
+      localStorage.setItem(PERSIST_KEY, JSON.stringify({ ...snap, config: { ...snap.config, barImages: {} } }));
+    } catch {
+      /* give up silently */
+    }
+  }
+}
+
+const persisted = typeof localStorage !== "undefined" ? loadPersisted() : null;
+const initialRows = persisted?.rows ?? getSampleRows();
+const initialEasing: EasingMode = persisted?.easing ?? "linear";
+const initialConfig = persisted ? { ...DEFAULT_CONFIG, ...persisted.config } : DEFAULT_CONFIG;
 
 export const useStudioStore = create<StudioState>((set, get) => ({
   rows: initialRows,
-  engine: buildEngine(initialRows, "linear"),
-  config: DEFAULT_CONFIG,
-  playback: DEFAULT_PLAYBACK,
-  theme: "dark",
-  colorBy: "name",
-  aspectId: "16:9",
-  easing: "linear",
+  engine: buildEngine(initialRows, initialEasing),
+  config: initialConfig,
+  playback: { ...DEFAULT_PLAYBACK, duration: persisted?.duration ?? DEFAULT_PLAYBACK.duration },
+  theme: persisted?.theme ?? "dark",
+  colorBy: persisted?.colorBy ?? "name",
+  aspectId: persisted?.aspectId ?? "16:9",
+  easing: initialEasing,
 
   setAspect: (id) => set({ aspectId: id }),
 
@@ -171,13 +203,13 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   loadState: (snap) =>
     set((s) => ({
       rows: snap.rows,
-      engine: buildEngine(snap.rows, snap.easing),
-      config: snap.config,
-      easing: snap.easing,
-      colorBy: snap.colorBy,
-      theme: snap.theme,
-      aspectId: snap.aspectId,
-      playback: { ...s.playback, duration: snap.duration, time: 0, playing: false },
+      engine: buildEngine(snap.rows, snap.easing ?? "linear"),
+      config: { ...DEFAULT_CONFIG, ...snap.config },
+      easing: snap.easing ?? "linear",
+      colorBy: snap.colorBy ?? "name",
+      theme: snap.theme ?? "dark",
+      aspectId: snap.aspectId ?? "16:9",
+      playback: { ...s.playback, duration: snap.duration ?? 12, time: 0, playing: false },
     })),
 
   addEntity: (name) => {
@@ -275,6 +307,36 @@ export function getStudioSnapshot(): StudioSnapshot {
     aspectId: s.aspectId,
     duration: s.playback.duration,
   };
+}
+
+// Auto-save to localStorage whenever the data/config/settings change — but not
+// on every playback frame (only `time` changes then, which isn't persisted).
+if (typeof window !== "undefined") {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let prev = useStudioStore.getState();
+  useStudioStore.subscribe((s) => {
+    const changed =
+      s.rows !== prev.rows ||
+      s.config !== prev.config ||
+      s.easing !== prev.easing ||
+      s.colorBy !== prev.colorBy ||
+      s.theme !== prev.theme ||
+      s.aspectId !== prev.aspectId ||
+      s.playback.duration !== prev.playback.duration;
+    prev = s;
+    if (!changed) return;
+    clearTimeout(timer);
+    timer = setTimeout(() => savePersisted(getStudioSnapshot()), 500);
+  });
+}
+
+/** Clear the saved work and reset to the sample (used by a "Reset" action). */
+export function clearPersisted(): void {
+  try {
+    localStorage.removeItem(PERSIST_KEY);
+  } catch {
+    /* ignore */
+  }
 }
 
 // Dev-only: expose the store for debugging + automated verification.

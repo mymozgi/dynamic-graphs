@@ -25,6 +25,8 @@ export function ExportSection() {
   const pause = useStudioStore((s) => s.pause);
   const seek01 = useStudioStore((s) => s.seek01);
   const aspectId = useStudioStore((s) => s.aspectId);
+  const loadState = useStudioStore((s) => s.loadState);
+  const configFileRef = useRef<HTMLInputElement>(null);
 
   const [format, setFormat] = useState<ImgFormat>("png");
   const [scale, setScale] = useState(2);
@@ -150,6 +152,29 @@ export function ExportSection() {
     setStatus({ msg: "Config saved — now run: npm run export", ok: true });
   }
 
+  async function handleLoadConfig(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const s = JSON.parse(await file.text());
+      if (!Array.isArray(s.rows) || s.rows.length === 0 || !s.config) throw new Error("bad");
+      loadState({
+        version: 1,
+        rows: s.rows,
+        config: s.config,
+        easing: s.easing ?? "linear",
+        colorBy: s.colorBy ?? "name",
+        theme: s.theme ?? "dark",
+        aspectId: s.aspectId ?? "16:9",
+        duration: s.duration ?? 12,
+      });
+      setStatus({ msg: "Config loaded ✓", ok: true });
+    } catch {
+      setStatus({ msg: "Not a valid chart config file" });
+    }
+  }
+
   return (
     <Section title="Export" defaultOpen>
       <Field label="Format">
@@ -261,9 +286,23 @@ export function ExportSection() {
       </p>
       <div className="btn-row">
         <button type="button" className="btn btn--primary" onClick={handleExportConfig}>
-          1. Save config (JSON)
+          Save config
         </button>
+        <button type="button" className="btn" onClick={() => configFileRef.current?.click()}>
+          Load config
+        </button>
+        <input
+          ref={configFileRef}
+          type="file"
+          accept=".json,application/json"
+          hidden
+          onChange={handleLoadConfig}
+        />
       </div>
+      <p className="export-status">
+        Your work auto-saves in this browser — reloading restores it. Save/Load config
+        to back it up or move between projects.
+      </p>
 
       {status && <div className={`export-status ${status.ok ? "is-ok" : ""}`}>{status.msg}</div>}
     </Section>

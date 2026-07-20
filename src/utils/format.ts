@@ -39,13 +39,15 @@ export function compactNumber(n: number): string {
 
 /**
  * Compound unit notation showing the top two magnitudes, e.g.
- * 1_032_000 -> "1m 32k", 1_250_500_000 -> "1b 250m". Below a million it
- * collapses to a single unit ("532k"); the second unit is dropped when zero.
+ * 1_032_000 -> "1m 32k", 1_250_500_000 -> "1b 250m",
+ * 3_460_000_000_000 -> "3t 460b". Below a million it collapses to a single
+ * unit ("532k"); the second unit is dropped when zero.
  */
 export function compoundNumber(n: number): string {
   const sign = n < 0 ? "-" : "";
   const abs = Math.abs(n);
   const ladder: [number, string, number, string][] = [
+    [1e12, "t", 1e9, "b"],
     [1e9, "b", 1e6, "m"],
     [1e6, "m", 1e3, "k"],
   ];

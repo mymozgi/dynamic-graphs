@@ -87,6 +87,13 @@ export interface ChartConfig {
   iconBorder: boolean;
   /** Per-entity custom images (data URLs); override the auto flag. */
   barImages: Record<string, string>;
+  /** Secondary per-entity images shown next to the entity name (a "flag" slot,
+   *  independent of the on-bar icon); falls back to the auto country flag. */
+  labelImages: Record<string, string>;
+  /** Show the secondary name-side icons. */
+  showLabelIcons: boolean;
+  /** Name-side icon height as a fraction of bar height (0.3..1). */
+  labelIconScale: number;
 
   // Canvas padding (px inset from each edge, on top of content margins)
   padTop: number;

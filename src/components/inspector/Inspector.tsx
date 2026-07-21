@@ -162,7 +162,7 @@ export function Inspector() {
             onChange={(v) => update({ paddingOutside: v })}
           />
         </Field>
-        <Field label="Icons">
+        <Field label="Bar Icons" hint="Icon on the bar (auto flag or your logo)">
           <Toggle checked={config.showFlags} onChange={(v) => update({ showFlags: v })} />
         </Field>
         {config.showFlags && (
@@ -199,6 +199,24 @@ export function Inspector() {
                 />
               </Field>
             )}
+          </>
+        )}
+        <Field label="Name Icons" hint="Second image beside the entity name (a flag slot)">
+          <Toggle checked={config.showLabelIcons} onChange={(v) => update({ showLabelIcons: v })} />
+        </Field>
+        {config.showLabelIcons && (
+          <Field label="Name Icon Size">
+            <Slider
+              value={Math.round(config.labelIconScale * 100)}
+              min={30}
+              max={100}
+              suffix="%"
+              onChange={(v) => update({ labelIconScale: v / 100 })}
+            />
+          </Field>
+        )}
+        {(config.showFlags || config.showLabelIcons) && (
+          <>
             <Field label="Icon Border">
               <Toggle checked={config.iconBorder} onChange={(v) => update({ iconBorder: v })} />
             </Field>

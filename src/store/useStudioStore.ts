@@ -45,6 +45,9 @@ const DEFAULT_CONFIG: ChartConfig = {
   iconAlign: "right",
   iconBorder: true,
   barImages: {},
+  labelImages: {},
+  showLabelIcons: false,
+  labelIconScale: 0.7,
 
   padTop: 16,
   padRight: 24,
@@ -107,6 +110,8 @@ interface StudioState {
   resetBarColors: () => void;
   setBarImage: (name: string, dataUrl: string) => void;
   clearBarImage: (name: string) => void;
+  setLabelImage: (name: string, dataUrl: string) => void;
+  clearLabelImage: (name: string) => void;
   setEasing: (mode: EasingMode) => void;
 
   // playback
@@ -158,7 +163,7 @@ function savePersisted(snap: StudioSnapshot) {
     // Likely quota (large bar images) — retry without images so at least the
     // data + settings survive a reload.
     try {
-      localStorage.setItem(PERSIST_KEY, JSON.stringify({ ...snap, config: { ...snap.config, barImages: {} } }));
+      localStorage.setItem(PERSIST_KEY, JSON.stringify({ ...snap, config: { ...snap.config, barImages: {}, labelImages: {} } }));
     } catch {
       /* give up silently */
     }
@@ -251,6 +256,14 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       const barImages = { ...s.config.barImages };
       delete barImages[name];
       return { config: { ...s.config, barImages } };
+    }),
+  setLabelImage: (name, dataUrl) =>
+    set((s) => ({ config: { ...s.config, labelImages: { ...s.config.labelImages, [name]: dataUrl } } })),
+  clearLabelImage: (name) =>
+    set((s) => {
+      const labelImages = { ...s.config.labelImages };
+      delete labelImages[name];
+      return { config: { ...s.config, labelImages } };
     }),
   setEasing: (mode) => set((s) => ({ easing: mode, engine: buildEngine(s.rows, mode) })),
 

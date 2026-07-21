@@ -47,14 +47,6 @@ export function BarChartRace({ width, height }: Props) {
   }, [config.labelFontSize, config.fontFamily]);
 
   // ---- Layout ----------------------------------------------------------
-  const longestName = useMemo(
-    () => engine.names.reduce((m, n) => Math.max(m, n.length), 0),
-    [engine.names],
-  );
-  const contentLeft = config.showEntityLabels
-    ? Math.min(210, 20 + longestName * config.labelFontSize * 0.6)
-    : 8;
-  const marginLeft = config.padLeft + contentLeft;
   const marginTop = config.padTop + (config.showHeader ? config.headerFontSize + 16 : 8);
   const marginBottom = config.padBottom + (config.showXAxis ? 34 : 8);
 
@@ -69,6 +61,24 @@ export function BarChartRace({ width, height }: Props) {
   const iconOutside = config.flagPosition === "outside";
   const pIn = config.paddingInside; // content inset inside a bar
   const pOut = config.paddingOutside; // gap from bar end to outside content
+
+  // Secondary "name" icon (a flag slot) sits between the entity name and the
+  // bar — a zone that never collides with the on-bar icon above.
+  const labelIconH = Math.min(barHeight * config.labelIconScale, barHeight);
+  const labelIconW = labelIconH * 1.35;
+  const labelIconGap = 8; // gap from the name-icon to the bar start
+  const labelIconSlot = config.showLabelIcons ? labelIconW + labelIconGap : 0;
+
+  // Left margin: room for the entity name plus the name-icon slot.
+  const longestName = useMemo(
+    () => engine.names.reduce((m, n) => Math.max(m, n.length), 0),
+    [engine.names],
+  );
+  const nameWidth = config.showEntityLabels
+    ? Math.min(210, 20 + longestName * config.labelFontSize * 0.6)
+    : 8;
+  const contentLeft = nameWidth + labelIconSlot;
+  const marginLeft = config.padLeft + contentLeft;
 
   // Right margin adapts to the widest value label (using the *global* max so
   // it stays stable during playback) plus any outside icon.
@@ -115,6 +125,9 @@ export function BarChartRace({ width, height }: Props) {
         </clipPath>
         <clipPath id="flag-clip">
           <rect x={0} y={0} width={flagW} height={flagH} rx={2.5} />
+        </clipPath>
+        <clipPath id="label-icon-clip">
+          <rect x={0} y={0} width={labelIconW} height={labelIconH} rx={2.5} />
         </clipPath>
       </defs>
 
@@ -172,6 +185,10 @@ export function BarChartRace({ width, height }: Props) {
           const iconUri = config.showFlags
             ? (customImg ?? getFlagDataUri(resolveIso(e.name)))
             : null;
+          const customLabel = config.labelImages[e.name];
+          const labelUri = config.showLabelIcons
+            ? (customLabel ?? getFlagDataUri(resolveIso(e.name)))
+            : null;
           const flagVisible = !!iconUri && (iconOutside || barW > flagW + pIn + 3);
           // Inside icon alignment: left / center / right within the bar.
           let flagX: number;
@@ -225,10 +242,10 @@ export function BarChartRace({ width, height }: Props) {
                 fill={color}
               />
 
-              {/* Entity name (left of the bar) */}
+              {/* Entity name (left of the bar, cleared for a name-icon) */}
               {config.showEntityLabels && (
                 <text
-                  x={plotLeft - 10}
+                  x={plotLeft - 10 - labelIconSlot}
                   y={yMid}
                   textAnchor="end"
                   dominantBaseline="central"
@@ -237,6 +254,29 @@ export function BarChartRace({ width, height }: Props) {
                 >
                   {e.name}
                 </text>
+              )}
+
+              {/* Secondary name-icon (flag slot), between the name and the bar */}
+              {labelUri && (
+                <g transform={`translate(${plotLeft - labelIconGap - labelIconW}, ${yMid - labelIconH / 2})`}>
+                  <image
+                    href={labelUri}
+                    width={labelIconW}
+                    height={labelIconH}
+                    clipPath="url(#label-icon-clip)"
+                    preserveAspectRatio={customLabel ? "xMidYMid meet" : "xMidYMid slice"}
+                  />
+                  {config.iconBorder && (
+                    <rect
+                      width={labelIconW}
+                      height={labelIconH}
+                      rx={2.5}
+                      fill="none"
+                      stroke="rgba(0,0,0,0.18)"
+                      strokeWidth={1}
+                    />
+                  )}
+                </g>
               )}
 
               {/* Flag (inline data-URI image, export-safe) */}

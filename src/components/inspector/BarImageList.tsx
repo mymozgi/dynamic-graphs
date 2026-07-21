@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useStudioStore } from "@/store/useStudioStore";
 import { resolveIso } from "@/data/countries";
 import { getFlagDataUri } from "@/data/flagRegistry";
+import { Segmented } from "@/components/ui/controls";
 
 function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -12,13 +13,24 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
-/** Per-entity custom images: upload a file or paste from the clipboard.
- *  The image renders inside the bar in place of the auto flag. */
+type Slot = "bar" | "name";
+
+/** Per-entity custom images with two independent slots: the on-bar icon
+ *  ("Bar") and the name-side flag ("Name"). Upload a file or paste from the
+ *  clipboard; unset entries fall back to the auto country flag. */
 export function BarImageList() {
   const names = useStudioStore((s) => s.engine.names);
   const barImages = useStudioStore((s) => s.config.barImages);
+  const labelImages = useStudioStore((s) => s.config.labelImages);
   const setBarImage = useStudioStore((s) => s.setBarImage);
   const clearBarImage = useStudioStore((s) => s.clearBarImage);
+  const setLabelImage = useStudioStore((s) => s.setLabelImage);
+  const clearLabelImage = useStudioStore((s) => s.clearLabelImage);
+
+  const [slot, setSlot] = useState<Slot>("bar");
+  const images = slot === "bar" ? barImages : labelImages;
+  const setImage = slot === "bar" ? setBarImage : setLabelImage;
+  const clearImage = slot === "bar" ? clearBarImage : clearLabelImage;
 
   const fileRef = useRef<HTMLInputElement>(null);
   const targetName = useRef<string>("");
@@ -31,7 +43,7 @@ export function BarImageList() {
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setBarImage(targetName.current, await blobToDataUrl(file));
+    if (file) setImage(targetName.current, await blobToDataUrl(file));
     e.target.value = "";
   };
 
@@ -42,7 +54,7 @@ export function BarImageList() {
       for (const item of items) {
         const type = item.types.find((t) => t.startsWith("image/"));
         if (type) {
-          setBarImage(name, await blobToDataUrl(await item.getType(type)));
+          setImage(name, await blobToDataUrl(await item.getType(type)));
           return;
         }
       }
@@ -57,9 +69,18 @@ export function BarImageList() {
       <div className="color-list__head">
         <span>Bar Images</span>
       </div>
+      <Segmented<Slot>
+        full
+        value={slot}
+        onChange={setSlot}
+        options={[
+          { value: "bar", label: "Bar" },
+          { value: "name", label: "Name" },
+        ]}
+      />
       <div className="color-list__scroll">
         {names.map((name) => {
-          const custom = barImages[name];
+          const custom = images[name];
           const preview = custom ?? getFlagDataUri(resolveIso(name));
           return (
             <div key={name} className="image-row">
@@ -67,7 +88,7 @@ export function BarImageList() {
                 type="button"
                 className="image-thumb"
                 onClick={() => openFile(name)}
-                aria-label={`Upload image for ${name}`}
+                aria-label={`Upload ${slot} image for ${name}`}
                 title="Upload image"
               >
                 {preview ? <img src={preview} alt="" /> : <span aria-hidden="true">+</span>}
@@ -77,7 +98,7 @@ export function BarImageList() {
                 type="button"
                 className="mini-btn"
                 onClick={() => paste(name)}
-                aria-label={`Paste image for ${name}`}
+                aria-label={`Paste ${slot} image for ${name}`}
               >
                 Paste
               </button>
@@ -85,9 +106,9 @@ export function BarImageList() {
                 <button
                   type="button"
                   className="mini-btn mini-btn--danger"
-                  aria-label={`Remove image for ${name}`}
+                  aria-label={`Remove ${slot} image for ${name}`}
                   title="Remove image"
-                  onClick={() => clearBarImage(name)}
+                  onClick={() => clearImage(name)}
                 >
                   <span aria-hidden="true">×</span>
                 </button>

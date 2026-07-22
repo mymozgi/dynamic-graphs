@@ -92,6 +92,109 @@ export function Inspector() {
 
       <ExportSection />
 
+      {config.chartType === "line" && (
+        <Section title="Line" defaultOpen>
+          <Field label="Series (max)">
+            <NumberStepper
+              value={Math.min(config.numBars, totalNames)}
+              min={1}
+              max={Math.max(1, totalNames)}
+              onChange={(v) => update({ numBars: v })}
+            />
+          </Field>
+          <Field label="Thickness">
+            <Slider value={config.lineWidth} min={1} max={16} onChange={(v) => update({ lineWidth: v })} />
+          </Field>
+          <Field label="Corners" hint="Angular or smooth curve">
+            <Segmented<"sharp" | "smooth">
+              value={config.lineCurve}
+              onChange={(v) => update({ lineCurve: v })}
+              options={[
+                { value: "sharp", label: "Sharp" },
+                { value: "smooth", label: "Smooth" },
+              ]}
+            />
+          </Field>
+          <Field label="Stroke">
+            <Segmented<"solid" | "dotted">
+              value={config.lineDash}
+              onChange={(v) => update({ lineDash: v })}
+              options={[
+                { value: "solid", label: "Solid" },
+                { value: "dotted", label: "Dotted" },
+              ]}
+            />
+          </Field>
+          <Field label="Area Gradient">
+            <Toggle checked={config.lineArea} onChange={(v) => update({ lineArea: v })} />
+          </Field>
+          {config.lineArea && (
+            <Field label="Gradient Opacity">
+              <Slider
+                value={Math.round(config.lineAreaOpacity * 100)}
+                min={5}
+                max={90}
+                suffix="%"
+                onChange={(v) => update({ lineAreaOpacity: v / 100 })}
+              />
+            </Field>
+          )}
+          <Field label="Growth Colors" hint="Green when rising, red when falling (per segment)">
+            <Toggle checked={config.lineGrowthColor} onChange={(v) => update({ lineGrowthColor: v })} />
+          </Field>
+          {config.lineGrowthColor && (
+            <>
+              <Field label="Up Color">
+                <div className="color-field">
+                  <input
+                    type="color"
+                    value={config.lineGrowthUpColor}
+                    onChange={(e) => update({ lineGrowthUpColor: e.target.value })}
+                  />
+                </div>
+              </Field>
+              <Field label="Down Color">
+                <div className="color-field">
+                  <input
+                    type="color"
+                    value={config.lineGrowthDownColor}
+                    onChange={(e) => update({ lineGrowthDownColor: e.target.value })}
+                  />
+                </div>
+              </Field>
+            </>
+          )}
+          <Field label="Points">
+            <Toggle checked={config.lineShowPoints} onChange={(v) => update({ lineShowPoints: v })} />
+          </Field>
+          <Field label="Head Value">
+            <Toggle checked={config.lineShowHeadValue} onChange={(v) => update({ lineShowHeadValue: v })} />
+          </Field>
+          <Field label="Series Label">
+            <Toggle checked={config.lineShowSeriesLabel} onChange={(v) => update({ lineShowSeriesLabel: v })} />
+          </Field>
+          <Field label="Y from Zero">
+            <Toggle checked={config.lineYFromZero} onChange={(v) => update({ lineYFromZero: v })} />
+          </Field>
+          <Field label="Freeze on Years" hint="Pause on each period — director's camera">
+            <Toggle checked={config.lineHoldEnabled} onChange={(v) => update({ lineHoldEnabled: v })} />
+          </Field>
+          {config.lineHoldEnabled && (
+            <Field label="Freeze (s)">
+              <Slider
+                value={config.lineHoldSeconds}
+                min={0.5}
+                max={5}
+                step={0.5}
+                suffix="s"
+                onChange={(v) => update({ lineHoldSeconds: v })}
+              />
+            </Field>
+          )}
+          <BarColorList />
+        </Section>
+      )}
+
       <Section title="Bars" defaultOpen>
         <Field label="No. of Bars">
           <NumberStepper

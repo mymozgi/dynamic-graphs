@@ -70,6 +70,23 @@ const DEFAULT_CONFIG: ChartConfig = {
   paletteId: "vivid",
   fontFamily: "Montserrat",
   canvasBg: null,
+
+  chartType: "barRace",
+
+  lineWidth: 4,
+  lineCurve: "smooth",
+  lineDash: "solid",
+  lineArea: true,
+  lineAreaOpacity: 0.35,
+  lineGrowthColor: false,
+  lineGrowthUpColor: "#22c55e",
+  lineGrowthDownColor: "#ef4444",
+  lineShowPoints: true,
+  lineShowHeadValue: true,
+  lineShowSeriesLabel: true,
+  lineHoldEnabled: false,
+  lineHoldSeconds: 1,
+  lineYFromZero: true,
 };
 
 const DEFAULT_PLAYBACK: PlaybackState = {

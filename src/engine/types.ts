@@ -124,6 +124,38 @@ export interface ChartConfig {
 
   // Optional explicit canvas background (else theme default)
   canvasBg: string | null;
+
+  // ---- Chart type -------------------------------------------------------
+  /** Which renderer to use for the center canvas. */
+  chartType: "barRace" | "line";
+
+  // ---- Line chart -------------------------------------------------------
+  /** Stroke width of the line(s), px. */
+  lineWidth: number;
+  /** Corner style: "sharp" (angular) or "smooth" (rounded curve). */
+  lineCurve: "sharp" | "smooth";
+  /** Stroke pattern for the line(s). */
+  lineDash: "solid" | "dotted";
+  /** Fill a vertical gradient under the line, fading toward the baseline. */
+  lineArea: boolean;
+  /** Top opacity of the area gradient (0..1); it fades to 0 at the bottom. */
+  lineAreaOpacity: number;
+  /** Colour each segment by direction: up = green, down = red. */
+  lineGrowthColor: boolean;
+  lineGrowthUpColor: string;
+  lineGrowthDownColor: string;
+  /** Draw a marker dot at every data point (always drawn at the moving head). */
+  lineShowPoints: boolean;
+  /** Show the moving value label at each line's head. */
+  lineShowHeadValue: boolean;
+  /** Show the series-name pill at each line's head. */
+  lineShowSeriesLabel: boolean;
+  /** "Director's camera": freeze the animation on each period boundary. */
+  lineHoldEnabled: boolean;
+  /** Freeze duration per hold, in seconds. */
+  lineHoldSeconds: number;
+  /** Start the Y axis at zero (else fit to the data minimum). */
+  lineYFromZero: boolean;
 }
 
 /** Playback / timeline state. */

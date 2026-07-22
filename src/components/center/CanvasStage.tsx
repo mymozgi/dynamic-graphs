@@ -2,6 +2,7 @@ import { useStudioStore } from "@/store/useStudioStore";
 import { getAspect } from "@/constants/aspects";
 import { useElementSize } from "@/hooks/useElementSize";
 import { BarChartRace } from "@/components/chart/BarChartRace";
+import { LineChart } from "@/components/chart/LineChart";
 
 const PADDING = 28;
 
@@ -33,7 +34,11 @@ export function CanvasStage() {
           className="canvas-frame"
           style={{ width: canvasW, height: canvasH, background: bg }}
         >
-          <BarChartRace width={Math.round(canvasW)} height={Math.round(canvasH)} />
+          {config.chartType === "line" ? (
+            <LineChart width={Math.round(canvasW)} height={Math.round(canvasH)} />
+          ) : (
+            <BarChartRace width={Math.round(canvasW)} height={Math.round(canvasH)} />
+          )}
         </div>
       )}
     </div>
